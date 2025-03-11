@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             { value: 'Mensual', label: 'Mensual' },
             { value: 'Trimestral', label: 'Trimestral' },
             { value: 'Semestral', label: 'Semestral' },
-            { value: 'Anual', label: 'Anual' }
+            { value: 'Anuall', label: 'Anual' }
         ];
         
         frequencies.forEach(freq => {
@@ -416,7 +416,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         subscriptions.forEach((sub, index) => {
             const card = document.createElement('div');
             card.className = 'card';
-            card.draggable = true;
 
             // Crear el encabezado de la tarjeta con logo y título
             const cardHeader = document.createElement('div');
@@ -452,9 +451,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 }
             };
             
-            titleContainer.appendChild(title);
-            titleContainer.appendChild(deleteButton);
-            
             // Agregar botón de toggle
             const toggleButton = document.createElement('button');
             toggleButton.className = 'toggle-button';
@@ -467,6 +463,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 toggleButton.innerHTML = isVisible ? '▼' : '▲';
             };
             cardHeader.appendChild(toggleButton);
+            
+            titleContainer.appendChild(title);
+            titleContainer.appendChild(deleteButton);
             
             cardHeader.appendChild(logo);
             cardHeader.appendChild(titleContainer);
@@ -523,57 +522,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Añadir eventos
             card.onclick = () => showDetails(sub);
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', index);
-            });
             
             app.appendChild(card);
         });
-
-        // Mantener el código existente para drag and drop
-        app.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const afterElement = getDragAfterElement(app, e.clientY);
-            const draggable = document.querySelector('.dragging');
-            if (afterElement == null) {
-                app.appendChild(draggable);
-            } else {
-                app.insertBefore(draggable, afterElement);
-            }
-        });
-
-        app.addEventListener('drop', (e) => {
-            const startIndex = parseInt(e.dataTransfer.getData('text/plain'));
-            const endIndex = [...app.childNodes].indexOf(getDragAfterElement(app, e.clientY));
-            reorderArray(startIndex, endIndex);
-            displaySubscriptions();
-        });
-    }
-
-    function getDragAfterElement(container, y) {
-        const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
-
-        return draggableElements.reduce((closest, child) => {
-            const box = child.getBoundingClientRect();
-            const offset = y - box.top - box.height / 2;
-            if (offset < 0 && offset > closest.offset) {
-                return { offset: offset, element: child };
-            } else {
-                return closest;
-            }
-        }, { offset: Number.NEGATIVE_INFINITY }).element;
-    }
-
-    async function reorderArray(startIndex, endIndex) {
-        const [reorderedItem] = subscriptions.splice(startIndex, 1);
-        subscriptions.splice(endIndex, 0, reorderedItem);
-        
-        try {
-            await dbOperations.updateSubscriptionsOrder(subscriptions);
-            subscriptions = await dbOperations.getAllSubscriptions();
-        } catch (error) {
-            console.error('Error al reordenar las suscripciones:', error);
-        }
     }
 
     function showDetails(subscription) {
@@ -914,7 +865,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </div>
                     <div id="monthsSelection" class="months-selection" style="display: none;">
                         ${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-                            .map((month, index) => `
+                            .map((month) => `
                                 <label>
                                     <input type="checkbox" 
                                         value="${month}" 
@@ -943,12 +894,165 @@ document.addEventListener('DOMContentLoaded', async function() {
                     </label>
                 </div>
             </div>
-            
+
+            <div class="form-group">
+                <label>Comprobante de pago</label>
+                <div class="receipt-container">
+                    <img class="receipt-image" src="${existingMember?.receiptImage || 'default-receipt.png'}" alt="Comprobante de pago" style="width: 50px; cursor: pointer;">
+                </div>
+            </div>
+
             <div class="form-buttons">
                 <button type="submit" class="save-button">Guardar</button>
                 <button type="button" class="cancel-button">Cancelar</button>
             </div>
         `;
+
+        // Agregar evento para cargar la imagen de comprobante
+        const receiptContainer = form.querySelector('.receipt-container');
+        const receiptImage = document.createElement('img');
+        receiptImage.className = 'receipt-image';
+        receiptImage.src = existingMember?.receiptImage || 'default-receipt.png';
+        receiptImage.alt = 'Comprobante de pago';
+        receiptImage.style.width = '50px';
+        receiptImage.style.cursor = 'pointer';
+        receiptContainer.appendChild(receiptImage);
+
+        const receiptMenu = document.createElement('div');
+        receiptMenu.className = 'receipt-menu';
+
+        const changeImageBtn = document.createElement('button');
+        changeImageBtn.className = 'receipt-option';
+        changeImageBtn.textContent = 'Cambiar imagen';
+        changeImageBtn.onclick = (e) => {
+            e.stopPropagation();
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        receiptImage.src = e.target.result;
+                        existingMember.receiptImage = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+            receiptMenu.style.display = 'none';
+        };
+
+        const previewImageBtn = document.createElement('button');
+        previewImageBtn.className = 'receipt-option';
+        previewImageBtn.textContent = 'Vista previa';
+        previewImageBtn.onclick = (e) => {
+            e.stopPropagation();
+            showReceiptPreview(existingMember.receiptImage, subscription, existingMember);
+            receiptMenu.style.display = 'none';
+        };
+
+        const deleteImageBtn = document.createElement('button');
+        deleteImageBtn.className = 'receipt-option';
+        deleteImageBtn.textContent = 'Eliminar imagen';
+        deleteImageBtn.onclick = (e) => {
+            e.stopPropagation();
+            receiptImage.src = 'default-receipt.png';
+            existingMember.receiptImage = null;
+            receiptMenu.style.display = 'none';
+        };
+
+        receiptMenu.appendChild(changeImageBtn);
+        receiptMenu.appendChild(previewImageBtn);
+        receiptMenu.appendChild(deleteImageBtn);
+        receiptContainer.appendChild(receiptMenu);
+
+        receiptImage.onclick = (e) => {
+            e.stopPropagation();
+            receiptMenu.style.display = receiptMenu.style.display === 'flex' ? 'none' : 'flex';
+        };
+
+        // Agregar comprobantes por mes
+        const monthlyReceiptsContainer = document.createElement('div');
+        monthlyReceiptsContainer.className = 'monthly-receipts-container';
+
+        const addMonthlyReceiptBtn = document.createElement('button');
+        addMonthlyReceiptBtn.textContent = 'Agregar comprobante mensual';
+        addMonthlyReceiptBtn.className = 'add-monthly-receipt-button';
+        addMonthlyReceiptBtn.onclick = () => {
+            const monthReceipt = document.createElement('div');
+            monthReceipt.className = 'month-receipt';
+
+            const monthReceiptImage = document.createElement('img');
+            monthReceiptImage.className = 'receipt-image';
+            monthReceiptImage.src = 'default-receipt.png';
+            monthReceiptImage.alt = 'Comprobante mensual';
+            monthReceiptImage.style.width = '50px';
+            monthReceiptImage.style.cursor = 'pointer';
+
+            const monthReceiptMenu = document.createElement('div');
+            monthReceiptMenu.className = 'receipt-menu';
+
+            const changeMonthImageBtn = document.createElement('button');
+            changeMonthImageBtn.className = 'receipt-option';
+            changeMonthImageBtn.textContent = 'Cambiar imagen';
+            changeMonthImageBtn.onclick = (e) => {
+                e.stopPropagation();
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            monthReceiptImage.src = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                input.click();
+                monthReceiptMenu.style.display = 'none';
+            };
+
+            const previewMonthImageBtn = document.createElement('button');
+            previewMonthImageBtn.className = 'receipt-option';
+            previewMonthImageBtn.textContent = 'Vista previa';
+            previewMonthImageBtn.onclick = (e) => {
+                e.stopPropagation();
+                showReceiptPreview(monthReceiptImage.src, subscription, existingMember);
+                monthReceiptMenu.style.display = 'none';
+            };
+
+            const deleteMonthImageBtn = document.createElement('button');
+            deleteMonthImageBtn.className = 'receipt-option';
+            deleteMonthImageBtn.textContent = 'Eliminar imagen';
+            deleteMonthImageBtn.onclick = (e) => {
+                e.stopPropagation();
+                monthReceiptImage.src = 'default-receipt.png';
+                monthReceiptMenu.style.display = 'none';
+            };
+
+            monthReceiptMenu.appendChild(changeMonthImageBtn);
+            monthReceiptMenu.appendChild(previewMonthImageBtn);
+            monthReceiptMenu.appendChild(deleteMonthImageBtn);
+            monthReceipt.appendChild(monthReceiptImage);
+            monthReceipt.appendChild(monthReceiptMenu);
+
+            monthReceiptImage.onclick = (e) => {
+                e.stopPropagation();
+                monthReceiptMenu.style.display = monthReceiptMenu.style.display === 'flex' ? 'none' : 'flex';
+            };
+
+            monthlyReceiptsContainer.appendChild(monthReceipt);
+        };
+
+        memberForm.appendChild(monthlyReceiptsContainer);
+        memberForm.appendChild(addMonthlyReceiptBtn);
+        memberForm.appendChild(form);
+        app.innerHTML = '';
+        app.appendChild(memberForm);
 
         // Agregar el evento para mostrar/ocultar la selección de meses
         const radioButtons = form.querySelectorAll('input[name="paymentPeriod"]');
@@ -991,7 +1095,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 paymentMethods: Array.from(form.querySelectorAll('.payment-methods input:checked')).map(cb => cb.value),
                 isPaid: form.querySelector('input[value="paid"]').checked,
                 paymentPeriod: paymentPeriod,
-                selectedMonths: selectedMonths
+                selectedMonths: selectedMonths,
+                receiptImage: existingMember?.receiptImage // Mantener la imagen de recibo
             };
 
             if (existingMember) {
@@ -1012,10 +1117,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         form.querySelector('.cancel-button').onclick = () => {
             showDetails(subscription);
         };
-
-        memberForm.appendChild(form);
-        app.innerHTML = '';
-        app.appendChild(memberForm);
     }
 
     function showMemberDetails(member) {
@@ -1036,5 +1137,29 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    // Función para mostrar la vista previa del comprobante
+    function showReceiptPreview(imageSrc, subscription, existingMember) {
+        const previewCard = document.createElement('div');
+        previewCard.className = 'preview-card';
+
+        const previewImage = document.createElement('img');
+        previewImage.className = 'preview-image';
+        previewImage.src = imageSrc;
+        previewImage.alt = 'Vista previa del comprobante';
+
+        const backButton = document.createElement('button');
+        backButton.textContent = 'Regresar';
+        backButton.className = 'back-button';
+        backButton.onclick = () => {
+            app.innerHTML = '';
+            showMemberForm(subscription, existingMember || {});
+        };
+
+        previewCard.appendChild(previewImage);
+        previewCard.appendChild(backButton);
+        app.innerHTML = '';
+        app.appendChild(previewCard);
+    }
+
     displaySubscriptions();
-}); 
+});
