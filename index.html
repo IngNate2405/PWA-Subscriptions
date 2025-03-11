@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
     <title>Mis Suscripciones</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Suscripciones">
     <meta name="description" content="Administra tus suscripciones y miembros fácilmente">
 </head>
 <body>
@@ -17,17 +18,17 @@
         <h1 id="main-title">Mis Subscripciones</h1>
     </div>
     <div id="app"></div>
-    <button id="add-button" class="add-button">Agregar Suscripción</button>
+    <button id="add-button" class="add-button">+</button>
     <script src="main.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => {
-                        console.log('Service Worker registrado con éxito:', registration.scope);
+                        console.log('ServiceWorker registrado exitosamente:', registration);
                     })
                     .catch(error => {
-                        console.log('Error al registrar el Service Worker:', error);
+                        console.log('Error al registrar el ServiceWorker:', error);
                     });
             });
         }

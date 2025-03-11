@@ -1,11 +1,11 @@
 {
     "name": "Mis Suscripciones",
     "short_name": "Suscripciones",
-    "description": "Administra tus suscripciones y miembros fácilmente",
+    "description": "Gestiona tus suscripciones y miembros fácilmente",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#000000",
+    "theme_color": "#4CAF50",
     "icons": [
         {
             "src": "icons/icon-72x72.png",
@@ -35,11 +35,6 @@
         {
             "src": "icons/icon-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/icon-384x384.png",
-            "sizes": "384x384",
             "type": "image/png"
         },
         {
