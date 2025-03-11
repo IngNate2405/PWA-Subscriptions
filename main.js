@@ -558,6 +558,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             input.type = 'file';
             input.accept = 'image/*';
             input.onchange = (e) => {
+                e.stopPropagation();
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
@@ -667,10 +668,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (index !== -1) {
                 const updatedSubscription = {
                     ...subscription,
+                    id: subscription.id,
                     name: title.textContent,
                     usdPrice: parseFloat(document.getElementById('edit-price').value),
                     totalDebited: parseFloat(document.getElementById('edit-total').value),
-                    frequency: document.getElementById('edit-frequency').value
+                    frequency: document.getElementById('edit-frequency').value,
+                    members: subscription.members.map(member => ({
+                        ...member,
+                        receiptImages: member.receiptImages || []
+                    }))
                 };
 
                 try {
@@ -813,7 +819,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function showMemberForm(subscription, existingMember = null) {
-        // Mantener el botón oculto cuando se muestra el formulario de miembros
         toggleAddButton(false);
         
         const memberForm = document.createElement('div');
@@ -823,281 +828,226 @@ document.addEventListener('DOMContentLoaded', async function() {
         formTitle.textContent = existingMember ? 'Editar Miembro' : 'Nuevo Miembro';
         memberForm.appendChild(formTitle);
 
-        // Crear formulario
         const form = document.createElement('form');
+        
+        // Campos del formulario (mantener los campos existentes)
         form.innerHTML = `
             <div class="form-group">
-                <label for="memberName">Nombre miembro</label>
+                <label for="memberName">Nombre:</label>
                 <input type="text" id="memberName" value="${existingMember?.name || ''}" required>
             </div>
-            
             <div class="form-group">
-                <label for="memberPayment">Pago (Q)</label>
-                <input type="number" id="memberPayment" value="${existingMember?.payment || ''}" required step="0.01" min="0">
+                <label for="memberPayment">Pago (GTQ):</label>
+                <input type="number" id="memberPayment" value="${existingMember?.payment || ''}" required>
             </div>
-
             <div class="form-group">
-                <label for="paymentFrequency">Frecuencia de Pago</label>
-                <select id="paymentFrequency" required>
+                <label for="paymentFrequency">Frecuencia de pago:</label>
+                <select id="paymentFrequency">
                     <option value="Mensual" ${existingMember?.frequency === 'Mensual' ? 'selected' : ''}>Mensual</option>
                     <option value="Trimestral" ${existingMember?.frequency === 'Trimestral' ? 'selected' : ''}>Trimestral</option>
                     <option value="Semestral" ${existingMember?.frequency === 'Semestral' ? 'selected' : ''}>Semestral</option>
                     <option value="Anual" ${existingMember?.frequency === 'Anual' ? 'selected' : ''}>Anual</option>
                 </select>
             </div>
-
             <div class="form-group">
-                <label>Meses pagados</label>
-                <div class="payment-period-options">
-                    <div class="radio-group">
-                        <label>
-                            <input type="radio" name="paymentPeriod" value="first-semester" ${existingMember?.paymentPeriod === 'first-semester' ? 'checked' : ''}>
-                            Ene - Jun
-                        </label>
-                        <label>
-                            <input type="radio" name="paymentPeriod" value="second-semester" ${existingMember?.paymentPeriod === 'second-semester' ? 'checked' : ''}>
-                            Jul - Dic
-                        </label>
-                        <label>
-                            <input type="radio" name="paymentPeriod" value="custom" ${existingMember?.paymentPeriod === 'custom' ? 'checked' : ''}>
-                            Selección múltiple
-                        </label>
-                    </div>
-                    <div id="monthsSelection" class="months-selection" style="display: none;">
-                        ${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-                            .map((month) => `
-                                <label>
-                                    <input type="checkbox" 
-                                        value="${month}" 
-                                        ${existingMember?.selectedMonths?.includes(month) ? 'checked' : ''}>
-                                    ${month}
-                                </label>
-                            `).join('')}
-                    </div>
+                <label>Período de pago:</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="paymentPeriod" value="first-semester" ${existingMember?.paymentPeriod === 'first-semester' ? 'checked' : ''}>
+                        Primer semestre (Ene - Jun)
+                    </label>
+                    <label>
+                        <input type="radio" name="paymentPeriod" value="second-semester" ${existingMember?.paymentPeriod === 'second-semester' ? 'checked' : ''}>
+                        Segundo semestre (Jul - Dic)
+                    </label>
+                    <label>
+                        <input type="radio" name="paymentPeriod" value="custom" ${existingMember?.paymentPeriod === 'custom' ? 'checked' : ''}>
+                        Meses específicos
+                    </label>
+                </div>
+                <div id="monthsSelection" style="display: none">
+                    ${['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+                        .map(month => `
+                            <label>
+                                <input type="checkbox" value="${month}" ${existingMember?.selectedMonths?.includes(month) ? 'checked' : ''}>
+                                ${month}
+                            </label>
+                        `).join('')}
                 </div>
             </div>
-            
             <div class="form-group">
-                <label>Método de pago</label>
+                <label>Método de pago:</label>
                 <div class="payment-methods">
-                    <label>
-                        <input type="checkbox" value="paid" ${existingMember?.paymentMethods?.includes('paid') ? 'checked' : ''}>
-                        Pagado
-                    </label>
-                    <label>
-                        <input type="checkbox" value="card" ${existingMember?.paymentMethods?.includes('card') ? 'checked' : ''}>
-                        En tarjeta
-                    </label>
                     <label>
                         <input type="checkbox" value="cash" ${existingMember?.paymentMethods?.includes('cash') ? 'checked' : ''}>
                         Efectivo
                     </label>
+                    <label>
+                        <input type="checkbox" value="transfer" ${existingMember?.paymentMethods?.includes('transfer') ? 'checked' : ''}>
+                        Transferencia
+                    </label>
                 </div>
             </div>
-
             <div class="form-group">
-                <label>Comprobante de pago</label>
-                <div class="receipt-container">
-                    <img class="receipt-image" src="${existingMember?.receiptImage || 'default-receipt.png'}" alt="Comprobante de pago" style="width: 50px; cursor: pointer;">
+                <label>Estado de pago:</label>
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="paymentStatus" value="paid" ${existingMember?.isPaid ? 'checked' : ''}>
+                        Pagado
+                    </label>
+                    <label>
+                        <input type="radio" name="paymentStatus" value="pending" ${!existingMember?.isPaid ? 'checked' : ''}>
+                        Pendiente
+                    </label>
                 </div>
             </div>
-
-            <div class="form-buttons">
+            <div class="form-group">
+                <label>Comprobantes de pago:</label>
+                <div class="receipt-container">
+                    <div class="receipt-spaces"></div>
+                    <button type="button" class="add-receipt-button">+</button>
+                </div>
+            </div>
+            <div class="buttons-container">
                 <button type="submit" class="save-button">Guardar</button>
                 <button type="button" class="cancel-button">Cancelar</button>
             </div>
         `;
 
-        // Agregar evento para cargar la imagen de comprobante
-        const receiptContainer = form.querySelector('.receipt-container');
-        const receiptImage = document.createElement('img');
-        receiptImage.className = 'receipt-image';
-        receiptImage.src = existingMember?.receiptImage || 'default-receipt.png';
-        receiptImage.alt = 'Comprobante de pago';
-        receiptImage.style.width = '50px';
-        receiptImage.style.cursor = 'pointer';
-        receiptContainer.appendChild(receiptImage);
+        // Función para crear un espacio de recibo con un menú desplegable
+        function createReceiptSpace(imageSrc = 'default-receipt.png') {
+            const space = document.createElement('div');
+            space.className = 'receipt-space';
+            space.style.position = 'relative';
 
-        const receiptMenu = document.createElement('div');
-        receiptMenu.className = 'receipt-menu';
+            const image = document.createElement('img');
+            image.className = 'receipt-image';
+            image.src = imageSrc;
+            image.alt = 'Comprobante de pago';
+            image.style.cssText = 'width: 50px; height: 50px; object-fit: cover; cursor: pointer;';
 
-        const changeImageBtn = document.createElement('button');
-        changeImageBtn.className = 'receipt-option';
-        changeImageBtn.textContent = 'Cambiar imagen';
-        changeImageBtn.onclick = (e) => {
-            e.stopPropagation();
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
+            const menu = document.createElement('div');
+            menu.className = 'receipt-menu';
+            menu.style.cssText = 'display: none; position: absolute; top: 60px; left: 0; background: white; border: 1px solid #ccc; padding: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
+
+            const changeBtn = document.createElement('button');
+            changeBtn.textContent = 'Cambiar imagen';
+            changeBtn.style.cssText = 'display: block; width: 100%; margin: 2px 0;';
+            
+            // Crear el input file de manera persistente
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.style.display = 'none';
+            space.appendChild(fileInput);
+
+            changeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+                menu.style.display = 'none';
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = this.files[0];
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        receiptImage.src = e.target.result;
-                        existingMember.receiptImage = e.target.result;
+                    reader.onload = function(e) {
+                        image.src = e.target.result;
                     };
                     reader.readAsDataURL(file);
                 }
-            };
-            input.click();
-            receiptMenu.style.display = 'none';
-        };
+            });
 
-        const previewImageBtn = document.createElement('button');
-        previewImageBtn.className = 'receipt-option';
-        previewImageBtn.textContent = 'Vista previa';
-        previewImageBtn.onclick = (e) => {
-            e.stopPropagation();
-            showReceiptPreview(existingMember.receiptImage, subscription, existingMember);
-            receiptMenu.style.display = 'none';
-        };
-
-        const deleteImageBtn = document.createElement('button');
-        deleteImageBtn.className = 'receipt-option';
-        deleteImageBtn.textContent = 'Eliminar imagen';
-        deleteImageBtn.onclick = (e) => {
-            e.stopPropagation();
-            receiptImage.src = 'default-receipt.png';
-            existingMember.receiptImage = null;
-            receiptMenu.style.display = 'none';
-        };
-
-        receiptMenu.appendChild(changeImageBtn);
-        receiptMenu.appendChild(previewImageBtn);
-        receiptMenu.appendChild(deleteImageBtn);
-        receiptContainer.appendChild(receiptMenu);
-
-        receiptImage.onclick = (e) => {
-            e.stopPropagation();
-            receiptMenu.style.display = receiptMenu.style.display === 'flex' ? 'none' : 'flex';
-        };
-
-        // Agregar comprobantes por mes
-        const monthlyReceiptsContainer = document.createElement('div');
-        monthlyReceiptsContainer.className = 'monthly-receipts-container';
-
-        const addMonthlyReceiptBtn = document.createElement('button');
-        addMonthlyReceiptBtn.textContent = 'Agregar comprobante mensual';
-        addMonthlyReceiptBtn.className = 'add-monthly-receipt-button';
-        addMonthlyReceiptBtn.onclick = () => {
-            const monthReceipt = document.createElement('div');
-            monthReceipt.className = 'month-receipt';
-
-            const monthReceiptImage = document.createElement('img');
-            monthReceiptImage.className = 'receipt-image';
-            monthReceiptImage.src = 'default-receipt.png';
-            monthReceiptImage.alt = 'Comprobante mensual';
-            monthReceiptImage.style.width = '50px';
-            monthReceiptImage.style.cursor = 'pointer';
-
-            const monthReceiptMenu = document.createElement('div');
-            monthReceiptMenu.className = 'receipt-menu';
-
-            const changeMonthImageBtn = document.createElement('button');
-            changeMonthImageBtn.className = 'receipt-option';
-            changeMonthImageBtn.textContent = 'Cambiar imagen';
-            changeMonthImageBtn.onclick = (e) => {
+            const previewBtn = document.createElement('button');
+            previewBtn.textContent = 'Vista previa';
+            previewBtn.style.cssText = 'display: block; width: 100%; margin: 2px 0;';
+            previewBtn.addEventListener('click', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            monthReceiptImage.src = e.target.result;
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                };
-                input.click();
-                monthReceiptMenu.style.display = 'none';
-            };
+                showReceiptPreview(image.src, subscription, existingMember);
+                menu.style.display = 'none';
+            });
 
-            const previewMonthImageBtn = document.createElement('button');
-            previewMonthImageBtn.className = 'receipt-option';
-            previewMonthImageBtn.textContent = 'Vista previa';
-            previewMonthImageBtn.onclick = (e) => {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Eliminar imagen';
+            deleteBtn.style.cssText = 'display: block; width: 100%; margin: 2px 0;';
+            deleteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
                 e.stopPropagation();
-                showReceiptPreview(monthReceiptImage.src, subscription, existingMember);
-                monthReceiptMenu.style.display = 'none';
-            };
-
-            const deleteMonthImageBtn = document.createElement('button');
-            deleteMonthImageBtn.className = 'receipt-option';
-            deleteMonthImageBtn.textContent = 'Eliminar imagen';
-            deleteMonthImageBtn.onclick = (e) => {
-                e.stopPropagation();
-                monthReceiptImage.src = 'default-receipt.png';
-                monthReceiptMenu.style.display = 'none';
-            };
-
-            monthReceiptMenu.appendChild(changeMonthImageBtn);
-            monthReceiptMenu.appendChild(previewMonthImageBtn);
-            monthReceiptMenu.appendChild(deleteMonthImageBtn);
-            monthReceipt.appendChild(monthReceiptImage);
-            monthReceipt.appendChild(monthReceiptMenu);
-
-            monthReceiptImage.onclick = (e) => {
-                e.stopPropagation();
-                monthReceiptMenu.style.display = monthReceiptMenu.style.display === 'flex' ? 'none' : 'flex';
-            };
-
-            monthlyReceiptsContainer.appendChild(monthReceipt);
-        };
-
-        memberForm.appendChild(monthlyReceiptsContainer);
-        memberForm.appendChild(addMonthlyReceiptBtn);
-        memberForm.appendChild(form);
-        app.innerHTML = '';
-        app.appendChild(memberForm);
-
-        // Agregar el evento para mostrar/ocultar la selección de meses
-        const radioButtons = form.querySelectorAll('input[name="paymentPeriod"]');
-        const monthsSelection = form.querySelector('#monthsSelection');
-        
-        radioButtons.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                if (e.target.value === 'custom') {
-                    monthsSelection.style.display = 'flex';
+                const spaces = form.querySelector('.receipt-spaces');
+                if (spaces.children.length > 1) {
+                    space.remove();
                 } else {
-                    monthsSelection.style.display = 'none';
+                    image.src = 'default-receipt.png';
+                }
+                menu.style.display = 'none';
+            });
+
+            menu.appendChild(changeBtn);
+            menu.appendChild(previewBtn);
+            menu.appendChild(deleteBtn);
+
+            image.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+            });
+
+            space.appendChild(image);
+            space.appendChild(menu);
+
+            // Cerrar el menú al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!space.contains(e.target)) {
+                    menu.style.display = 'none';
                 }
             });
-        });
 
-        // Si ya tenía selección múltiple, mostrar la sección
-        if (existingMember?.paymentPeriod === 'custom') {
-            monthsSelection.style.display = 'flex';
+            return space;
         }
 
-        // Actualizar el onsubmit para incluir los meses pagados
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            const paymentPeriod = form.querySelector('input[name="paymentPeriod"]:checked').value;
-            let selectedMonths = [];
-            
-            if (paymentPeriod === 'first-semester') {
-                selectedMonths = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
-            } else if (paymentPeriod === 'second-semester') {
-                selectedMonths = ['Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-            } else if (paymentPeriod === 'custom') {
-                selectedMonths = Array.from(form.querySelectorAll('#monthsSelection input:checked'))
-                    .map(checkbox => checkbox.value);
-            }
+        // Agregar espacios de recibo existentes o uno por defecto
+        const receiptSpaces = form.querySelector('.receipt-spaces');
+        if (existingMember?.receiptImages?.length) {
+            existingMember.receiptImages.forEach(src => {
+                receiptSpaces.appendChild(createReceiptSpace(src));
+            });
+        } else {
+            receiptSpaces.appendChild(createReceiptSpace());
+        }
 
+        // Configurar el botón de agregar recibo
+        const addReceiptButton = form.querySelector('.add-receipt-button');
+        addReceiptButton.onclick = (e) => {
+            e.preventDefault(); // Evitar el comportamiento por defecto
+            const newReceiptSpace = createReceiptSpace();
+            receiptSpaces.appendChild(newReceiptSpace);
+        };
+
+        // Configurar el evento submit del formulario
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const receiptImages = Array.from(form.querySelectorAll('.receipt-image'))
+                .map(img => img.src)
+                .filter(src => src !== 'default-receipt.png' && !src.endsWith('default-receipt.png'));
+            
             const memberData = {
-                name: form.querySelector('#memberName').value,
-                payment: parseFloat(form.querySelector('#memberPayment').value),
-                frequency: form.querySelector('#paymentFrequency').value,
-                paymentMethods: Array.from(form.querySelectorAll('.payment-methods input:checked')).map(cb => cb.value),
-                isPaid: form.querySelector('input[value="paid"]').checked,
-                paymentPeriod: paymentPeriod,
-                selectedMonths: selectedMonths,
-                receiptImage: existingMember?.receiptImage // Mantener la imagen de recibo
+                name: document.getElementById('memberName').value,
+                payment: parseFloat(document.getElementById('memberPayment').value),
+                frequency: document.getElementById('paymentFrequency').value,
+                paymentPeriod: document.querySelector('input[name="paymentPeriod"]:checked')?.value,
+                paymentMethods: Array.from(document.querySelectorAll('.payment-methods input:checked')).map(cb => cb.value),
+                isPaid: document.querySelector('input[value="paid"]').checked,
+                receiptImages: receiptImages
             };
+
+            if (memberData.paymentPeriod === 'custom') {
+                memberData.selectedMonths = Array.from(document.querySelectorAll('#monthsSelection input:checked')).map(cb => cb.value);
+            }
 
             if (existingMember) {
                 const index = subscription.members.findIndex(m => m.name === existingMember.name);
@@ -1111,12 +1061,39 @@ document.addEventListener('DOMContentLoaded', async function() {
                 subscription.members.push(memberData);
             }
 
-            showDetails(subscription);
+            try {
+                await dbOperations.updateSubscription(subscription);
+                subscriptions = await dbOperations.getAllSubscriptions();
+                showDetails(subscription);
+            } catch (error) {
+                console.error('Error al guardar el miembro:', error);
+                alert('Hubo un error al guardar el miembro');
+            }
         };
 
+        // Configurar el botón de cancelar
         form.querySelector('.cancel-button').onclick = () => {
             showDetails(subscription);
         };
+
+        // Configurar eventos para el período de pago
+        const radioButtons = form.querySelectorAll('input[name="paymentPeriod"]');
+        const monthsSelection = form.querySelector('#monthsSelection');
+        
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                monthsSelection.style.display = e.target.value === 'custom' ? 'flex' : 'none';
+            });
+        });
+
+        // Mostrar la selección de meses si es necesario
+        if (existingMember?.paymentPeriod === 'custom') {
+            monthsSelection.style.display = 'flex';
+        }
+
+        memberForm.appendChild(form);
+        app.innerHTML = '';
+        app.appendChild(memberForm);
     }
 
     function showMemberDetails(member) {
