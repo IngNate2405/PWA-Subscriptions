@@ -739,4 +739,99 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .receipt-option:hover {
     background-color: var(--hover-bg);
+}
+
+.comments-section {
+    margin-top: 15px;
+    width: 100%;
+}
+
+.comment-input-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.comment-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+}
+
+.add-comment-button {
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    align-self: flex-start;
+}
+
+.add-comment-button:hover {
+    background-color: #45a049;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.comment-item {
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+.comment-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.comment-text {
+    flex: 1;
+    word-break: break-word;
+}
+
+.comment-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.edit-comment-button,
+.delete-comment-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    font-size: 16px;
+}
+
+.edit-comment-button:hover,
+.delete-comment-button:hover {
+    opacity: 0.7;
+}
+
+/* Estilos para modo oscuro */
+.dark-theme .comment-item {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+.dark-theme .comment-input {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: white;
+}
+
+.dark-theme .comment-text {
+    color: white;
 } 

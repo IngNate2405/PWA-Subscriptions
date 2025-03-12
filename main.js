@@ -908,6 +908,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <button type="button" class="add-receipt-button">+</button>
                 </div>
             </div>
+            <div class="form-group">
+                <label>Comentarios:</label>
+                <div class="comments-section">
+                    <div class="comment-input-container">
+                        <textarea id="new-comment" placeholder="Escribe un comentario..." class="comment-input"></textarea>
+                        <button type="button" class="add-comment-button">Agregar</button>
+                    </div>
+                    <div class="comments-list"></div>
+                </div>
+            </div>
             <div class="buttons-container">
                 <button type="submit" class="save-button">Guardar</button>
                 <button type="button" class="cancel-button">Cancelar</button>
@@ -1027,6 +1037,97 @@ document.addEventListener('DOMContentLoaded', async function() {
             receiptSpaces.appendChild(newReceiptSpace);
         };
 
+        // Configurar la funcionalidad de comentarios
+        const commentsList = form.querySelector('.comments-list');
+        const newCommentInput = form.querySelector('#new-comment');
+        const addCommentButton = form.querySelector('.add-comment-button');
+
+        // Función para crear un elemento de comentario
+        function createCommentElement(commentText, index) {
+            const commentDiv = document.createElement('div');
+            commentDiv.className = 'comment-item';
+            
+            const commentContent = document.createElement('div');
+            commentContent.className = 'comment-content';
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = 'comment-text';
+            textSpan.textContent = commentText;
+            
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.className = 'comment-buttons';
+            
+            const editButton = document.createElement('button');
+            editButton.className = 'edit-comment-button';
+            editButton.innerHTML = '✏️';
+            editButton.onclick = () => {
+                const newText = prompt('Editar comentario:', commentText);
+                if (newText !== null && newText.trim() !== '') {
+                    textSpan.textContent = newText.trim();
+                    if (existingMember) {
+                        existingMember.comments[index] = newText.trim();
+                    } else {
+                        subscription.tempComments[index] = newText.trim();
+                    }
+                }
+            };
+            
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-comment-button';
+            deleteButton.innerHTML = '🗑️';
+            deleteButton.onclick = () => {
+                if (confirm('¿Estás seguro de que deseas eliminar este comentario?')) {
+                    commentDiv.remove();
+                    if (existingMember) {
+                        existingMember.comments.splice(index, 1);
+                    } else {
+                        subscription.tempComments.splice(index, 1);
+                    }
+                }
+            };
+            
+            buttonsDiv.appendChild(editButton);
+            buttonsDiv.appendChild(deleteButton);
+            
+            commentContent.appendChild(textSpan);
+            commentContent.appendChild(buttonsDiv);
+            commentDiv.appendChild(commentContent);
+            
+            return commentDiv;
+        }
+
+        // Inicializar los comentarios
+        if (!existingMember) {
+            subscription.tempComments = subscription.tempComments || [];
+        } else {
+            existingMember.comments = existingMember.comments || [];
+        }
+
+        // Mostrar comentarios existentes
+        const comments = existingMember ? existingMember.comments : subscription.tempComments;
+        comments.forEach((comment, index) => {
+            commentsList.appendChild(createCommentElement(comment, index));
+        });
+
+        // Configurar el botón de agregar comentario
+        addCommentButton.onclick = () => {
+            const commentText = newCommentInput.value.trim();
+            if (commentText) {
+                const comments = existingMember ? existingMember.comments : subscription.tempComments;
+                comments.push(commentText);
+                commentsList.appendChild(createCommentElement(commentText, comments.length - 1));
+                newCommentInput.value = '';
+            }
+        };
+
+        // Permitir enviar con Enter en el textarea
+        newCommentInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                addCommentButton.click();
+            }
+        });
+
         // Configurar el evento submit del formulario
         form.onsubmit = async (e) => {
             e.preventDefault();
@@ -1042,7 +1143,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 paymentPeriod: document.querySelector('input[name="paymentPeriod"]:checked')?.value,
                 paymentMethods: Array.from(document.querySelectorAll('.payment-methods input:checked')).map(cb => cb.value),
                 isPaid: document.querySelector('input[value="paid"]').checked,
-                receiptImages: receiptImages
+                receiptImages: receiptImages,
+                comments: existingMember ? existingMember.comments : subscription.tempComments || []
             };
 
             if (memberData.paymentPeriod === 'custom') {
