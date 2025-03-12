@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             usdPrice: 0,
             members: [],
             frequency: 'Mensual',
-            logo: 'default-logo.png'
+            logo: 'default-logo.jpg'
         };
 
         const details = document.createElement('div');
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const changeImageBtn = document.createElement('button');
         changeImageBtn.className = 'logo-option';
-        changeImageBtn.textContent = 'Cambiar imagen';
+        changeImageBtn.textContent = 'Agregar/Cambiar imagen';
         changeImageBtn.onclick = (e) => {
             e.stopPropagation();
             const input = document.createElement('input');
@@ -551,7 +551,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         const changeImageBtn = document.createElement('button');
         changeImageBtn.className = 'logo-option';
-        changeImageBtn.textContent = 'Cambiar imagen';
+        changeImageBtn.textContent = 'Agregar/Cambiar imagen';
         changeImageBtn.onclick = (e) => {
             e.stopPropagation();
             const input = document.createElement('input');
@@ -931,7 +931,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             menu.style.cssText = 'display: none; position: absolute; top: 60px; left: 0; background: white; border: 1px solid #ccc; padding: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);';
 
             const changeBtn = document.createElement('button');
-            changeBtn.textContent = 'Cambiar imagen';
+            changeBtn.textContent = 'Agregar/Cambiar imagen';
             changeBtn.style.cssText = 'display: block; width: 100%; margin: 2px 0;';
             
             // Crear el input file de manera persistente
@@ -1136,6 +1136,71 @@ document.addEventListener('DOMContentLoaded', async function() {
         previewCard.appendChild(backButton);
         app.innerHTML = '';
         app.appendChild(previewCard);
+    }
+
+    // Función para verificar el estado de la conexión
+    function checkConnectivity() {
+        const statusDiv = document.createElement('div');
+        statusDiv.id = 'connection-status';
+        statusDiv.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        `;
+        document.body.appendChild(statusDiv);
+
+        function updateOnlineStatus() {
+            const isOnline = navigator.onLine;
+            statusDiv.style.backgroundColor = isOnline ? '#4CAF50' : '#f44336';
+            statusDiv.textContent = isOnline ? '🌐 Online' : '📴 Offline';
+            
+            console.log('Estado de la aplicación:', {
+                online: isOnline,
+                serviceWorker: 'serviceWorker' in navigator ? 'Soportado' : 'No soportado',
+                cache: 'caches' in window ? 'Disponible' : 'No disponible',
+                indexedDB: 'indexedDB' in window ? 'Disponible' : 'No disponible'
+            });
+        }
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
+        // Verificar Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+                console.log('Service Worker listo:', registration.active ? 'Activo' : 'Inactivo');
+            });
+        }
+
+        // Verificar Cache
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                console.log('Caches disponibles:', cacheNames);
+                cacheNames.forEach(cacheName => {
+                    caches.open(cacheName).then(cache => {
+                        cache.keys().then(requests => {
+                            console.log(`Archivos en cache ${cacheName}:`, requests.map(req => req.url));
+                        });
+                    });
+                });
+            });
+        }
+
+        // Verificar IndexedDB
+        if (db) {
+            const transaction = db.transaction(['subscriptions'], 'readonly');
+            const store = transaction.objectStore('subscriptions');
+            const request = store.count();
+            request.onsuccess = () => {
+                console.log('Número de suscripciones en IndexedDB:', request.result);
+            };
+        }
     }
 
     displaySubscriptions();
