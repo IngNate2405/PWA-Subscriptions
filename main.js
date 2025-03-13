@@ -412,6 +412,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         toggleAddButton(true);
         app.innerHTML = '';
         
+        // Obtener los estados guardados de los toggles
+        let toggleStates = JSON.parse(localStorage.getItem('toggleStates') || '{}');
+        
         // Mostrar las suscripciones existentes
         subscriptions.forEach((sub, index) => {
             const card = document.createElement('div');
@@ -438,10 +441,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             deleteButton.className = 'delete-subscription-button';
             deleteButton.innerHTML = '🗑️';
             deleteButton.onclick = async (e) => {
-                e.stopPropagation(); // Evitar que se abra la vista de detalles
+                e.stopPropagation();
                 if (confirm('¿Estás seguro de que deseas eliminar esta suscripción? Esta acción no se puede deshacer.')) {
                     try {
                         await dbOperations.deleteSubscription(sub.id);
+                        // Eliminar el estado del toggle cuando se elimina la suscripción
+                        delete toggleStates[sub.id];
+                        localStorage.setItem('toggleStates', JSON.stringify(toggleStates));
                         subscriptions = await dbOperations.getAllSubscriptions();
                         displaySubscriptions();
                     } catch (error) {
@@ -454,13 +460,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Agregar botón de toggle
             const toggleButton = document.createElement('button');
             toggleButton.className = 'toggle-button';
-            toggleButton.innerHTML = '▼';
+            toggleButton.innerHTML = toggleStates[sub.id] ? '▲' : '▼';
             toggleButton.onclick = (e) => {
                 e.stopPropagation();
                 const content = card.querySelector('.card-content');
                 const isVisible = content.style.display !== 'none';
                 content.style.display = isVisible ? 'none' : 'block';
                 toggleButton.innerHTML = isVisible ? '▼' : '▲';
+                // Guardar el estado del toggle
+                toggleStates[sub.id] = !isVisible;
+                localStorage.setItem('toggleStates', JSON.stringify(toggleStates));
             };
             cardHeader.appendChild(toggleButton);
             
@@ -475,6 +484,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Crear contenedor para el contenido que se puede ocultar
             const cardContent = document.createElement('div');
             cardContent.className = 'card-content';
+            // Establecer el estado inicial del contenido basado en el estado guardado
+            cardContent.style.display = toggleStates[sub.id] ? 'block' : 'none';
 
             // Crear las filas de precios
             const createPriceRow = (label, value) => {
