@@ -1,4 +1,4 @@
-const CACHE_NAME = 'suscripciones-v1';
+const CACHE_NAME = 'suscripciones-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -17,6 +17,14 @@ const urlsToCache = [
   '/icons/icon-512x512.png'
 ];
 
+// Enviar mensaje a todos los clientes
+const sendMessageToClients = async (message) => {
+  const clients = await self.clients.matchAll();
+  clients.forEach(client => {
+    client.postMessage(message);
+  });
+};
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -25,42 +33,77 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
   );
+  // Notificar que hay una nueva versión disponible
+  sendMessageToClients({ type: 'UPDATE_AVAILABLE' });
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    Promise.all([
+      // Limpiar caches antiguos
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // Tomar el control inmediatamente
+      self.clients.claim()
+    ])
+  );
+  // Notificar que la nueva versión está activa
+  sendMessageToClients({ type: 'UPDATE_ACTIVATED' });
 });
 
 self.addEventListener('fetch', event => {
+  // No cachear solicitudes a la API/IndexedDB
+  if (event.request.url.includes('indexedDB') || 
+      event.request.url.includes('api')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {
+        // Siempre ir a la red para archivos críticos
+        if (event.request.url.includes('main.js') || 
+            event.request.url.includes('sw.js') || 
+            event.request.url.includes('styles.css')) {
+          return fetch(event.request)
+            .then(networkResponse => {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME)
+                .then(cache => {
+                  cache.put(event.request, responseToCache);
+                });
+              return networkResponse;
+            })
+            .catch(() => response);
+        }
+
+        // Si está en caché, devolver la respuesta cacheada
         if (response) {
           return response;
         }
+
+        // Si no está en caché, intentar obtenerlo de la red
         return fetch(event.request)
-          .then(response => {
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
+          .then(networkResponse => {
+            if (!networkResponse || networkResponse.status !== 200) {
+              return networkResponse;
             }
-            const responseToCache = response.clone();
+
+            const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME)
               .then(cache => {
                 cache.put(event.request, responseToCache);
               });
-            return response;
+
+            return networkResponse;
           });
       })
-  );
-});
-
-self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
   );
 }); 

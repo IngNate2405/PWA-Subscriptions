@@ -2,6 +2,52 @@ document.addEventListener('DOMContentLoaded', async function() {
     const app = document.getElementById('app');
     const addButton = document.getElementById('add-button');
     
+    // Crear el contenedor de notificaciones de actualización
+    const updateNotification = document.createElement('div');
+    updateNotification.id = 'update-notification';
+    updateNotification.style.cssText = `
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #4CAF50;
+        color: white;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        text-align: center;
+        font-weight: bold;
+    `;
+    document.body.appendChild(updateNotification);
+
+    // Manejar mensajes del Service Worker
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data.type === 'UPDATE_AVAILABLE') {
+                showUpdateNotification('¡Nueva versión disponible! Haz clic aquí para actualizar.');
+            } else if (event.data.type === 'UPDATE_ACTIVATED') {
+                showUpdateNotification('¡Nueva versión instalada! Recarga para usar la última versión.');
+            }
+        });
+
+        // Verificar actualizaciones cada 30 minutos
+        setInterval(() => {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.update();
+            });
+        }, 30 * 60 * 1000);
+    }
+
+    function showUpdateNotification(message) {
+        updateNotification.textContent = message;
+        updateNotification.style.display = 'block';
+        updateNotification.onclick = () => {
+            window.location.reload();
+        };
+    }
+
     // Agregar el encabezado con el botón de tema
     const header = document.createElement('div');
     header.className = 'header';

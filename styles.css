@@ -835,4 +835,34 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .dark-theme .comment-text {
     color: white;
+}
+
+#update-notification {
+    animation: slideIn 0.3s ease-out;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+#update-notification:hover {
+    transform: translateX(-50%) scale(1.05);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-50%) translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Ajuste para dispositivos móviles */
+@media (max-width: 600px) {
+    #update-notification {
+        width: 80%;
+        font-size: 14px;
+        padding: 12px;
+    }
 } 
