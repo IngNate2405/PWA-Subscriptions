@@ -845,7 +845,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Manejar el cambio de imagen y eventos
         logo.onclick = (e) => {
             e.stopPropagation();
-            logoMenu.style.display = logoMenu.style.display === 'flex' ? 'none' : 'flex';
+            logoMenu.style.display = logoMenu.style.display === 'none' ? 'block' : 'none';
         };
 
         // Actualizar precio GTQ automáticamente cuando cambie el precio USD
@@ -1449,6 +1449,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         if ('serviceWorker' in navigator) {
             try {
                 const registration = await navigator.serviceWorker.ready;
+                // Mostrar una notificación de prueba inmediata
+                showPaymentNotification(
+                    { name: 'Prueba' },
+                    { name: 'Notificación de prueba' }
+                );
                 // Programar las notificaciones para todos los miembros
                 checkAndScheduleNotifications();
             } catch (error) {
@@ -1467,11 +1472,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const paymentDate = new Date(member.nextPaymentDate);
                     const timeUntilPayment = paymentDate.getTime() - now.getTime();
                     
-                    // Programar notificación un día antes
-                    if (timeUntilPayment > 0) {
+                    // Mostrar notificación si el pago es en menos de 5 minutos
+                    if (timeUntilPayment > 0 && timeUntilPayment <= 5 * 60 * 1000) {
                         setTimeout(() => {
                             showPaymentNotification(member, subscription);
-                        }, timeUntilPayment - (24 * 60 * 60 * 1000)); // 24 horas antes
+                        }, 1000); // Mostrar después de 1 segundo
                     }
                 }
             });
