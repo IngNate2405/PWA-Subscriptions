@@ -1565,31 +1565,32 @@ document.addEventListener('DOMContentLoaded', async function() {
         const now = new Date();
         
         subscriptions.forEach(subscription => {
-            subscription.members.forEach(member => {
-                if (member.nextPaymentDate) {
-                    const paymentDate = new Date(member.nextPaymentDate);
-                    const timeUntilPayment = paymentDate.getTime() - now.getTime();
-                    
-                    // Mostrar notificación si el pago es en menos de 5 minutos
-                    if (timeUntilPayment > 0 && timeUntilPayment <= 5 * 60 * 1000) {
-                        setTimeout(() => {
-                            showPaymentNotification(member, subscription);
-                        }, 1000); // Mostrar después de 1 segundo
-                    }
+            if (subscription.nextPaymentDate) {
+                const paymentDate = new Date(subscription.nextPaymentDate);
+                const timeUntilPayment = paymentDate.getTime() - now.getTime();
+                
+                // Si la fecha de pago es en el futuro y está a menos de 5 minutos
+                if (timeUntilPayment > 0 && timeUntilPayment <= 5 * 60 * 1000) {
+                    showPaymentNotification(
+                        { name: 'Próximo pago' },
+                        subscription
+                    );
                 }
-            });
+            }
         });
+
+        // Programar la próxima verificación en 1 minuto
+        setTimeout(checkAndScheduleNotifications, 60 * 1000);
     }
 
     // Función para mostrar la notificación
     function showPaymentNotification(member, subscription) {
         if ('Notification' in window && Notification.permission === 'granted') {
-            // Mostrar una notificación de prueba inmediata
             const notification = new Notification('Recordatorio de Pago', {
-                body: `Mañana vence el pago de ${subscription.name} para ${member.name}`,
+                body: `El pago de ${subscription.name} vence en 5 minutos`,
                 icon: subscription.logo || 'default-logo.png',
                 badge: subscription.logo || 'default-logo.png',
-                tag: `payment-${subscription.id}-${member.name}`,
+                tag: `payment-${subscription.id}`,
                 requireInteraction: true,
                 vibrate: [200, 100, 200]
             });
@@ -1604,7 +1605,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             alert.className = 'payment-alert';
             alert.innerHTML = `
                 <div class="alert-content">
-                    <span>🔔 Recordatorio: Mañana vence el pago de ${subscription.name}</span>
+                    <span>🔔 Recordatorio: El pago de ${subscription.name} vence en 5 minutos</span>
                     <button onclick="this.parentElement.remove()">×</button>
                 </div>
             `;
@@ -1615,9 +1616,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Solicitar permiso de notificaciones al cargar la aplicación
+    // Iniciar la verificación de notificaciones cuando se carga la página
     document.addEventListener('DOMContentLoaded', () => {
         requestNotificationPermission();
+        checkAndScheduleNotifications(); // Iniciar el ciclo de verificación
     });
 
     displaySubscriptions();
