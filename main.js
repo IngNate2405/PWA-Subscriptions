@@ -345,6 +345,37 @@ document.addEventListener('DOMContentLoaded', async function() {
         frequencyRow.appendChild(frequencySelect);
         details.appendChild(frequencyRow);
         
+        // Agregar campos de fecha y hora de notificación
+        const paymentDateTimeRow = document.createElement('div');
+        paymentDateTimeRow.className = 'edit-row';
+        paymentDateTimeRow.innerHTML = `
+            <span class="edit-label">Notificación:</span>
+            <div class="payment-datetime">
+                <input type="date" id="paymentDate" required>
+                <input type="time" id="paymentTime" value="12:00" required>
+            </div>
+            <div class="notification-info" style="margin-top: 5px; font-size: 0.9em; color: var(--text-secondary);">
+                La notificación se enviará 5 minutos antes de la fecha y hora seleccionada
+            </div>
+        `;
+        details.appendChild(paymentDateTimeRow);
+
+        // Agregar función para actualizar la información de la notificación
+        const updateNotificationInfo = () => {
+            const date = document.getElementById('paymentDate').value;
+            const time = document.getElementById('paymentTime').value;
+            if (date && time) {
+                const notificationDate = new Date(date + 'T' + time);
+                notificationDate.setMinutes(notificationDate.getMinutes() - 5);
+                const notificationInfo = document.querySelector('.notification-info');
+                notificationInfo.textContent = `La notificación se enviará el ${notificationDate.toLocaleDateString()} a las ${notificationDate.toLocaleTimeString()}`;
+            }
+        };
+
+        // Agregar event listeners para actualizar la información
+        paymentDateTimeRow.querySelector('#paymentDate').addEventListener('change', updateNotificationInfo);
+        paymentDateTimeRow.querySelector('#paymentTime').addEventListener('change', updateNotificationInfo);
+
         // Mostrar precio en GTQ (se actualizará automáticamente)
         const gtqRow = document.createElement('div');
         gtqRow.className = 'price-row';
@@ -724,7 +755,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const paymentDateTimeRow = document.createElement('div');
         paymentDateTimeRow.className = 'edit-row';
         paymentDateTimeRow.innerHTML = `
-            <span class="edit-label">Fecha y hora de pago:</span>
+            <span class="edit-label">Notificación:</span>
             <div class="payment-datetime">
                 <input type="date" id="paymentDate" 
                        value="${subscription.paymentDate || ''}" 
@@ -733,9 +764,33 @@ document.addEventListener('DOMContentLoaded', async function() {
                        value="${subscription.paymentTime || '12:00'}" 
                        required>
             </div>
+            <div class="notification-info" style="margin-top: 5px; font-size: 0.9em; color: var(--text-secondary);">
+                La notificación se enviará 5 minutos antes de la fecha y hora seleccionada
+            </div>
         `;
         details.appendChild(paymentDateTimeRow);
-        
+
+        // Agregar función para actualizar la información de la notificación
+        const updateNotificationInfo = () => {
+            const date = document.getElementById('paymentDate').value;
+            const time = document.getElementById('paymentTime').value;
+            if (date && time) {
+                const notificationDate = new Date(date + 'T' + time);
+                notificationDate.setMinutes(notificationDate.getMinutes() - 5);
+                const notificationInfo = document.querySelector('.notification-info');
+                notificationInfo.textContent = `La notificación se enviará el ${notificationDate.toLocaleDateString()} a las ${notificationDate.toLocaleTimeString()}`;
+            }
+        };
+
+        // Agregar event listeners para actualizar la información
+        paymentDateTimeRow.querySelector('#paymentDate').addEventListener('change', updateNotificationInfo);
+        paymentDateTimeRow.querySelector('#paymentTime').addEventListener('change', updateNotificationInfo);
+
+        // Actualizar la información inicial si hay fecha y hora guardadas
+        if (subscription.paymentDate && subscription.paymentTime) {
+            updateNotificationInfo();
+        }
+
         // Mostrar precio en GTQ (no editable, se actualiza automáticamente)
         const gtqRow = document.createElement('div');
         gtqRow.className = 'price-row';
