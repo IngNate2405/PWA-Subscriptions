@@ -865,4 +865,117 @@ input[type="number"]::-webkit-inner-spin-button {
         font-size: 14px;
         padding: 12px;
     }
+}
+
+.payment-datetime {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.payment-datetime input[type="date"],
+.payment-datetime input[type="time"] {
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+/* Estilos para modo oscuro */
+.dark-theme .payment-datetime input[type="date"],
+.dark-theme .payment-datetime input[type="time"] {
+    background-color: #2a2a2a;
+    border-color: #444;
+    color: white;
+}
+
+/* Ajustes para móvil */
+@media (max-width: 600px) {
+    .payment-datetime {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .payment-datetime input[type="date"],
+    .payment-datetime input[type="time"] {
+        width: 100%;
+    }
+}
+
+.notification-button {
+    position: static;
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    margin-left: 10px;
+}
+
+.notification-button:hover {
+    transform: scale(1.1);
+}
+
+.payment-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+    animation: slideIn 0.5s ease-out;
+}
+
+.alert-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-content button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.alert-content button:hover {
+    transform: scale(1.1);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Estilos para modo oscuro */
+.dark-theme .payment-alert {
+    background-color: #2d2d2d;
+    color: white;
+}
+
+/* Ajustes para móvil */
+@media (max-width: 600px) {
+    .payment-alert {
+        top: auto;
+        bottom: 20px;
+        right: 20px;
+        left: 20px;
+        font-size: 14px;
+    }
 } 
