@@ -142,13 +142,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         },
 
-        addSubscription: async (subscription) => {
-            const db = await openDB();
-            const tx = db.transaction('subscriptions', 'readwrite');
-            const store = tx.objectStore('subscriptions');
-            const id = await store.add(subscription);
-            await tx.complete;
-            return id;
+        addSubscription: (subscription) => {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['subscriptions'], 'readwrite');
+                const store = transaction.objectStore('subscriptions');
+                const request = store.add(subscription);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
         },
 
         updateSubscription: (subscription) => {
@@ -365,8 +367,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const notificationInfo = document.querySelector('.notification-info');
             
             if (!dateInput || !timeInput || !notificationInfo) {
-                console.log('Elementos de notificación no encontrados');
-                return;
+                return; // Salir silenciosamente si los elementos no existen
             }
 
             const date = dateInput.value;
@@ -379,9 +380,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         };
 
-        // Agregar event listeners para actualizar la información
-        paymentDateTimeRow.querySelector('#paymentDate').addEventListener('change', updateNotificationInfo);
-        paymentDateTimeRow.querySelector('#paymentTime').addEventListener('change', updateNotificationInfo);
+        // Agregar event listeners para actualizar la información solo si los elementos existen
+        const dateInput = paymentDateTimeRow.querySelector('#paymentDate');
+        const timeInput = paymentDateTimeRow.querySelector('#paymentTime');
+        
+        if (dateInput && timeInput) {
+            dateInput.addEventListener('change', updateNotificationInfo);
+            timeInput.addEventListener('change', updateNotificationInfo);
+        }
 
         // Mostrar precio en GTQ (se actualizará automáticamente)
         const gtqRow = document.createElement('div');
@@ -801,8 +807,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const notificationInfo = document.querySelector('.notification-info');
             
             if (!dateInput || !timeInput || !notificationInfo) {
-                console.log('Elementos de notificación no encontrados');
-                return;
+                return; // Salir silenciosamente si los elementos no existen
             }
 
             const date = dateInput.value;
@@ -815,9 +820,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         };
 
-        // Agregar event listeners para actualizar la información
-        paymentDateTimeRow.querySelector('#paymentDate').addEventListener('change', updateNotificationInfo);
-        paymentDateTimeRow.querySelector('#paymentTime').addEventListener('change', updateNotificationInfo);
+        // Agregar event listeners para actualizar la información solo si los elementos existen
+        const dateInput = paymentDateTimeRow.querySelector('#paymentDate');
+        const timeInput = paymentDateTimeRow.querySelector('#paymentTime');
+        
+        if (dateInput && timeInput) {
+            dateInput.addEventListener('change', updateNotificationInfo);
+            timeInput.addEventListener('change', updateNotificationInfo);
+        }
 
         // Actualizar la información inicial si hay fecha y hora guardadas
         if (subscription.paymentDate && subscription.paymentTime) {
