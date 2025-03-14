@@ -413,7 +413,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 totalDebited: totalDebited || (usdPrice * 8),
                 frequency: frequency,
                 members: [],
-                logo: emptySubscription.logo
+                logo: emptySubscription.logo,
+                paymentDate: document.getElementById('paymentDate').value,
+                paymentTime: document.getElementById('paymentTime').value,
+                nextPaymentDate: calculateNextPaymentDate(
+                    document.getElementById('paymentDate').value,
+                    document.getElementById('paymentTime').value,
+                    frequency
+                )
             };
 
             try {
@@ -600,6 +607,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             cardContent.appendChild(createPriceRow('Precio GTQ:', `Q${(sub.usdPrice * 8).toFixed(2)}`));
             cardContent.appendChild(createPriceRow('Total miembros:', sub.members.length));
             cardContent.appendChild(createPriceRow('Frecuencia:', sub.frequency || 'Mensual'));
+
+            if (sub.paymentDate && sub.paymentTime) {
+                const nextPaymentDate = new Date(sub.nextPaymentDate);
+                cardContent.appendChild(createPriceRow('Próximo pago:', 
+                    `${nextPaymentDate.toLocaleDateString()} ${nextPaymentDate.toLocaleTimeString()}`));
+            }
 
             // Calcular el total recibido (suma de pagos de miembros)
             const totalRecibido = sub.members.reduce((total, member) => {
