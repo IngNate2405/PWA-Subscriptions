@@ -59,6 +59,11 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  // Ignorar las peticiones de chrome-extension
+  if (event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+
   // No cachear solicitudes a la API/IndexedDB
   if (event.request.url.includes('indexedDB') || 
       event.request.url.includes('api')) {

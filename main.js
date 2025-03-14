@@ -61,6 +61,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     themeButton.innerHTML = '🌙';
     themeButton.onclick = toggleTheme;
     
+    // Agregar botón de notificaciones
+    const notificationButton = document.createElement('button');
+    notificationButton.className = 'notification-button';
+    notificationButton.innerHTML = '🔔';
+    notificationButton.onclick = async () => {
+        if ('Notification' in window) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                alert('¡Notificaciones activadas! Recibirás alertas un día antes de cada pago.');
+                notificationButton.innerHTML = '🔔';
+                registerNotificationWorker();
+            } else if (permission === 'denied') {
+                alert('Por favor habilita las notificaciones en la configuración de tu navegador para recibir recordatorios de pago.');
+                notificationButton.innerHTML = '🔕';
+            }
+        }
+    };
+    
+    title.appendChild(notificationButton);
     title.appendChild(themeButton);
     header.appendChild(title);
     document.body.insertBefore(header, app);
@@ -311,13 +330,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             { value: 'Mensual', label: 'Mensual' },
             { value: 'Trimestral', label: 'Trimestral' },
             { value: 'Semestral', label: 'Semestral' },
-            { value: 'Anuall', label: 'Anual' }
+            { value: 'Anual', label: 'Anual' }
         ];
         
         frequencies.forEach(freq => {
             const option = document.createElement('option');
             option.value = freq.value;
             option.textContent = freq.label;
+            option.selected = emptySubscription.frequency === freq.value;
             frequencySelect.appendChild(option);
         });
         
@@ -325,6 +345,50 @@ document.addEventListener('DOMContentLoaded', async function() {
         frequencyRow.appendChild(frequencySelect);
         details.appendChild(frequencyRow);
         
+        // Agregar campos de fecha y hora de notificación
+        const paymentDateTimeRow = document.createElement('div');
+        paymentDateTimeRow.className = 'edit-row';
+        paymentDateTimeRow.innerHTML = `
+            <span class="edit-label">Notificación:</span>
+            <div class="payment-datetime">
+                <input type="date" id="paymentDate" required>
+                <input type="time" id="paymentTime" value="12:00" required>
+            </div>
+            <div class="notification-info" style="margin-top: 5px; font-size: 0.9em; color: var(--text-secondary);">
+                La notificación se enviará 5 minutos antes de la fecha y hora seleccionada
+            </div>
+        `;
+        details.appendChild(paymentDateTimeRow);
+
+        // Agregar función para actualizar la información de la notificación
+        const updateNotificationInfo = () => {
+            const dateInput = document.getElementById('paymentDate');
+            const timeInput = document.getElementById('paymentTime');
+            const notificationInfo = document.querySelector('.notification-info');
+            
+            if (!dateInput || !timeInput || !notificationInfo) {
+                return; // Salir silenciosamente si los elementos no existen
+            }
+
+            const date = dateInput.value;
+            const time = timeInput.value;
+            
+            if (date && time) {
+                const notificationDate = new Date(date + 'T' + time);
+                notificationDate.setMinutes(notificationDate.getMinutes() - 5);
+                notificationInfo.textContent = `La notificación se enviará el ${notificationDate.toLocaleDateString()} a las ${notificationDate.toLocaleTimeString()}`;
+            }
+        };
+
+        // Agregar event listeners para actualizar la información solo si los elementos existen
+        const dateInput = paymentDateTimeRow.querySelector('#paymentDate');
+        const timeInput = paymentDateTimeRow.querySelector('#paymentTime');
+        
+        if (dateInput && timeInput) {
+            dateInput.addEventListener('change', updateNotificationInfo);
+            timeInput.addEventListener('change', updateNotificationInfo);
+        }
+
         // Mostrar precio en GTQ (se actualizará automáticamente)
         const gtqRow = document.createElement('div');
         gtqRow.className = 'price-row';
@@ -362,11 +426,22 @@ document.addEventListener('DOMContentLoaded', async function() {
                 totalDebited: totalDebited || (usdPrice * 8),
                 frequency: frequency,
                 members: [],
-                logo: emptySubscription.logo
+                logo: emptySubscription.logo,
+                paymentDate: document.getElementById('paymentDate').value,
+                paymentTime: document.getElementById('paymentTime').value,
+                nextPaymentDate: calculateNextPaymentDate(
+                    document.getElementById('paymentDate').value,
+                    document.getElementById('paymentTime').value,
+                    frequency
+                )
             };
 
             try {
-                await dbOperations.addSubscription(newSubscription);
+                const newId = await dbOperations.addSubscription(newSubscription);
+                const createdSubscription = {
+                    ...newSubscription,
+                    id: newId
+                };
                 subscriptions = await dbOperations.getAllSubscriptions();
                 displaySubscriptions();
             } catch (error) {
@@ -550,6 +625,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             cardContent.appendChild(createPriceRow('Total miembros:', sub.members.length));
             cardContent.appendChild(createPriceRow('Frecuencia:', sub.frequency || 'Mensual'));
 
+            if (sub.paymentDate && sub.paymentTime) {
+                const nextPaymentDate = new Date(sub.nextPaymentDate);
+                cardContent.appendChild(createPriceRow('Próximo pago:', 
+                    `${nextPaymentDate.toLocaleDateString()} ${nextPaymentDate.toLocaleTimeString()}`));
+            }
+
             // Calcular el total recibido (suma de pagos de miembros)
             const totalRecibido = sub.members.reduce((total, member) => {
                 if (!member.payment) return total;
@@ -700,6 +781,59 @@ document.addEventListener('DOMContentLoaded', async function() {
         frequencyRow.appendChild(frequencySelect);
         details.appendChild(frequencyRow);
         
+        // Agregar campos de fecha y hora de pago
+        const paymentDateTimeRow = document.createElement('div');
+        paymentDateTimeRow.className = 'edit-row';
+        paymentDateTimeRow.innerHTML = `
+            <span class="edit-label">Notificación:</span>
+            <div class="payment-datetime">
+                <input type="date" id="paymentDate" 
+                       value="${subscription.paymentDate || ''}" 
+                       required>
+                <input type="time" id="paymentTime" 
+                       value="${subscription.paymentTime || '12:00'}" 
+                       required>
+            </div>
+            <div class="notification-info" style="margin-top: 5px; font-size: 0.9em; color: var(--text-secondary);">
+                La notificación se enviará 5 minutos antes de la fecha y hora seleccionada
+            </div>
+        `;
+        details.appendChild(paymentDateTimeRow);
+
+        // Agregar función para actualizar la información de la notificación
+        const updateNotificationInfo = () => {
+            const dateInput = document.getElementById('paymentDate');
+            const timeInput = document.getElementById('paymentTime');
+            const notificationInfo = document.querySelector('.notification-info');
+            
+            if (!dateInput || !timeInput || !notificationInfo) {
+                return; // Salir silenciosamente si los elementos no existen
+            }
+
+            const date = dateInput.value;
+            const time = timeInput.value;
+            
+            if (date && time) {
+                const notificationDate = new Date(date + 'T' + time);
+                notificationDate.setMinutes(notificationDate.getMinutes() - 5);
+                notificationInfo.textContent = `La notificación se enviará el ${notificationDate.toLocaleDateString()} a las ${notificationDate.toLocaleTimeString()}`;
+            }
+        };
+
+        // Agregar event listeners para actualizar la información solo si los elementos existen
+        const dateInput = paymentDateTimeRow.querySelector('#paymentDate');
+        const timeInput = paymentDateTimeRow.querySelector('#paymentTime');
+        
+        if (dateInput && timeInput) {
+            dateInput.addEventListener('change', updateNotificationInfo);
+            timeInput.addEventListener('change', updateNotificationInfo);
+        }
+
+        // Actualizar la información inicial si hay fecha y hora guardadas
+        if (subscription.paymentDate && subscription.paymentTime) {
+            updateNotificationInfo();
+        }
+
         // Mostrar precio en GTQ (no editable, se actualiza automáticamente)
         const gtqRow = document.createElement('div');
         gtqRow.className = 'price-row';
@@ -730,6 +864,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     usdPrice: parseFloat(document.getElementById('edit-price').value),
                     totalDebited: parseFloat(document.getElementById('edit-total').value),
                     frequency: document.getElementById('edit-frequency').value,
+                    paymentDate: document.getElementById('paymentDate').value,
+                    paymentTime: document.getElementById('paymentTime').value,
+                    nextPaymentDate: calculateNextPaymentDate(
+                        document.getElementById('paymentDate').value,
+                        document.getElementById('paymentTime').value,
+                        document.getElementById('edit-frequency').value
+                    ),
                     members: subscription.members.map(member => ({
                         ...member,
                         receiptImages: member.receiptImages || []
@@ -802,7 +943,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Manejar el cambio de imagen y eventos
         logo.onclick = (e) => {
             e.stopPropagation();
-            logoMenu.style.display = logoMenu.style.display === 'flex' ? 'none' : 'flex';
+            logoMenu.style.display = logoMenu.style.display === 'none' ? 'block' : 'none';
         };
 
         // Actualizar precio GTQ automáticamente cuando cambie el precio USD
@@ -1189,6 +1330,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         form.onsubmit = async (e) => {
             e.preventDefault();
             
+            const paymentDate = document.getElementById('paymentDate').value;
+            const paymentTime = document.getElementById('paymentTime').value;
+            
             const receiptImages = Array.from(form.querySelectorAll('.receipt-image'))
                 .map(img => img.src)
                 .filter(src => src !== 'default-receipt.png' && !src.endsWith('default-receipt.png'));
@@ -1201,7 +1345,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 paymentMethods: Array.from(document.querySelectorAll('.payment-methods input:checked')).map(cb => cb.value),
                 isPaid: document.querySelector('input[value="paid"]').checked,
                 receiptImages: receiptImages,
-                comments: existingMember ? existingMember.comments : subscription.tempComments || []
+                comments: existingMember ? existingMember.comments : subscription.tempComments || [],
+                paymentDate: paymentDate,
+                paymentTime: paymentTime,
+                nextPaymentDate: calculateNextPaymentDate(paymentDate, paymentTime, document.getElementById('paymentFrequency').value)
             };
 
             if (memberData.paymentPeriod === 'custom') {
@@ -1361,6 +1508,119 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
         }
     }
+
+    // Función para calcular la próxima fecha de pago
+    function calculateNextPaymentDate(date, time, frequency) {
+        const nextDate = new Date(date + 'T' + time);
+        
+        switch(frequency) {
+            case 'Mensual':
+                nextDate.setMonth(nextDate.getMonth() + 1);
+                break;
+            case 'Trimestral':
+                nextDate.setMonth(nextDate.getMonth() + 3);
+                break;
+            case 'Semestral':
+                nextDate.setMonth(nextDate.getMonth() + 6);
+                break;
+            case 'Anual':
+                nextDate.setFullYear(nextDate.getFullYear() + 1);
+                break;
+        }
+        
+        return nextDate.toISOString();
+    }
+
+    // Función para solicitar permiso de notificaciones
+    async function requestNotificationPermission() {
+        if ('Notification' in window) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                // Registrar el Service Worker para las notificaciones
+                registerNotificationWorker();
+            }
+        }
+    }
+
+    // Función para registrar el Service Worker de notificaciones
+    async function registerNotificationWorker() {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                // Mostrar una notificación de prueba inmediata
+                showPaymentNotification(
+                    { name: 'Prueba' },
+                    { name: 'Notificación de prueba' }
+                );
+                // Programar las notificaciones para todos los miembros
+                checkAndScheduleNotifications();
+            } catch (error) {
+                console.error('Error al registrar el worker de notificaciones:', error);
+            }
+        }
+    }
+
+    // Función para programar las notificaciones
+    async function checkAndScheduleNotifications() {
+        const now = new Date();
+        
+        subscriptions.forEach(subscription => {
+            if (subscription.nextPaymentDate) {
+                const paymentDate = new Date(subscription.nextPaymentDate);
+                const timeUntilPayment = paymentDate.getTime() - now.getTime();
+                
+                // Si la fecha de pago es en el futuro y está a menos de 5 minutos
+                if (timeUntilPayment > 0 && timeUntilPayment <= 5 * 60 * 1000) {
+                    showPaymentNotification(
+                        { name: 'Próximo pago' },
+                        subscription
+                    );
+                }
+            }
+        });
+
+        // Programar la próxima verificación en 1 minuto
+        setTimeout(checkAndScheduleNotifications, 60 * 1000);
+    }
+
+    // Función para mostrar la notificación
+    function showPaymentNotification(member, subscription) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification('Recordatorio de Pago', {
+                body: `El pago de ${subscription.name} vence en 5 minutos`,
+                icon: subscription.logo || 'default-logo.png',
+                badge: subscription.logo || 'default-logo.png',
+                tag: `payment-${subscription.id}`,
+                requireInteraction: true,
+                vibrate: [200, 100, 200]
+            });
+
+            notification.onclick = () => {
+                window.focus();
+                showDetails(subscription);
+            };
+
+            // Mostrar también una alerta en la interfaz
+            const alert = document.createElement('div');
+            alert.className = 'payment-alert';
+            alert.innerHTML = `
+                <div class="alert-content">
+                    <span>🔔 Recordatorio: El pago de ${subscription.name} vence en 5 minutos</span>
+                    <button onclick="this.parentElement.remove()">×</button>
+                </div>
+            `;
+            document.body.appendChild(alert);
+            
+            // Eliminar la alerta después de 10 segundos
+            setTimeout(() => alert.remove(), 10000);
+        }
+    }
+
+    // Iniciar la verificación de notificaciones cuando se carga la página
+    document.addEventListener('DOMContentLoaded', () => {
+        requestNotificationPermission();
+        checkAndScheduleNotifications(); // Iniciar el ciclo de verificación
+    });
 
     displaySubscriptions();
 });
