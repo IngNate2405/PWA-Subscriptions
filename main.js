@@ -142,15 +142,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
         },
 
-        addSubscription: (subscription) => {
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['subscriptions'], 'readwrite');
-                const store = transaction.objectStore('subscriptions');
-                const request = store.add(subscription);
-
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
-            });
+        addSubscription: async (subscription) => {
+            const db = await openDB();
+            const tx = db.transaction('subscriptions', 'readwrite');
+            const store = tx.objectStore('subscriptions');
+            const id = await store.add(subscription);
+            await tx.complete;
+            return id;
         },
 
         updateSubscription: (subscription) => {
@@ -424,7 +422,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             };
 
             try {
-                await dbOperations.addSubscription(newSubscription);
+                const newId = await dbOperations.addSubscription(newSubscription);
+                const createdSubscription = {
+                    ...newSubscription,
+                    id: newId
+                };
                 subscriptions = await dbOperations.getAllSubscriptions();
                 displaySubscriptions();
             } catch (error) {
