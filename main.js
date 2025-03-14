@@ -360,12 +360,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Agregar función para actualizar la información de la notificación
         const updateNotificationInfo = () => {
-            const date = document.getElementById('paymentDate').value;
-            const time = document.getElementById('paymentTime').value;
+            const dateInput = document.getElementById('paymentDate');
+            const timeInput = document.getElementById('paymentTime');
+            const notificationInfo = document.querySelector('.notification-info');
+            
+            if (!dateInput || !timeInput || !notificationInfo) {
+                console.log('Elementos de notificación no encontrados');
+                return;
+            }
+
+            const date = dateInput.value;
+            const time = timeInput.value;
+            
             if (date && time) {
                 const notificationDate = new Date(date + 'T' + time);
                 notificationDate.setMinutes(notificationDate.getMinutes() - 5);
-                const notificationInfo = document.querySelector('.notification-info');
                 notificationInfo.textContent = `La notificación se enviará el ${notificationDate.toLocaleDateString()} a las ${notificationDate.toLocaleTimeString()}`;
             }
         };
@@ -787,12 +796,21 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Agregar función para actualizar la información de la notificación
         const updateNotificationInfo = () => {
-            const date = document.getElementById('paymentDate').value;
-            const time = document.getElementById('paymentTime').value;
+            const dateInput = document.getElementById('paymentDate');
+            const timeInput = document.getElementById('paymentTime');
+            const notificationInfo = document.querySelector('.notification-info');
+            
+            if (!dateInput || !timeInput || !notificationInfo) {
+                console.log('Elementos de notificación no encontrados');
+                return;
+            }
+
+            const date = dateInput.value;
+            const time = timeInput.value;
+            
             if (date && time) {
                 const notificationDate = new Date(date + 'T' + time);
                 notificationDate.setMinutes(notificationDate.getMinutes() - 5);
-                const notificationInfo = document.querySelector('.notification-info');
                 notificationInfo.textContent = `La notificación se enviará el ${notificationDate.toLocaleDateString()} a las ${notificationDate.toLocaleTimeString()}`;
             }
         };
